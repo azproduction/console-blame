@@ -11,7 +11,18 @@ It highlights and helps to find forgotten console.log calls in runtime
 npm install console-blame --save-dev
 ```
 
-## Options
+## Interface
+
+ - `ConsoleBlame(Object consoleObject, String[] trapsList)`
+ - `ConsoleBlame(Object consoleObject)`
+ - `ConsoleBlame(String[] trapsList)`
+ - `ConsoleBlame()`
+ - `ConsoleBlame#configure(Object options)` see `Configuration options`
+ - `ConsoleBlame#restore()` releases all trapped methods
+ - `ConsoleBlame#trap(String[] ...methods)` traps all listed methods
+ - `ConsoleBlame#trap()` traps all available methods 
+
+## Configuration options
 
 Can be configured, using `require('console-blame').configure({ ... })`
 
@@ -22,41 +33,63 @@ Can be configured, using `require('console-blame').configure({ ... })`
 
 ## Example
 
-```js
-// Trap only console.log
-require('console-blame')(console, ['log']);
-
-console.log(123); // Will print debug message
-```
+**Trap all methods of console**
 
 ```js
-// Trap all methods of console
 require('console-blame')();
 
 console.log(123); // Will print debug message
 console.error(123); // Will print debug message
 ```
 
+**Trap only console.log**
+
 ```js
-// Trap all methods and change size of context and line format 
-require('console-blame')(console).configure({
+require('console-blame')(['log']);
+
+console.log(123); // Will print debug message
+```
+
+**Trap only log and error of specific console object**
+
+```js
+require('console-blame')(console, ['log', 'error']);
+
+console.log(123); // Will print debug message
+```
+
+**Trap all methods and change size of context and line format**
+
+```js 
+require('console-blame')().configure({
    contextSize: 5,
    lineFormat: '%d\t%s'
 });
 
 console.log(123);
 ```
+
+**Restore traps**
+
+```js
+var blame = require('console-blame')();
+console.log(123); // Will print debug message
+blame.restore();
+console.log(123); // Will NOT print debug message
+blame.trap();
+console.log(123); // Will print debug message
+```
  
-**Output example**
+## Output example
 
 ```
-/Users/azproduction/Documents/my/console-blame/lib/index.js:174:9
+A log message
+/home/username/projects/console-blame/lib/index.js:174:9
  169 | attachTrapsTo(console).configure({
  170 |   contextSize: 5,
  171 |   lineFormat: '%d\t%s'
  172 | });
  173 |
- 174 | console.log(123); // <<< This line will be highlighted
+ 174 | console.log('A log message'); // <<< This line will be highlighted
  175 |
-123
 ```

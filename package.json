@@ -1,6 +1,6 @@
 {
   "name": "console-blame",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Mikhail Davydov <i@azproduction.ru>",
   "description": "It highlights and helps to find forgotten console.log calls in runtime",
   "contributors": [
@@ -32,11 +32,14 @@
     "istanbul": "0.1.39",
     "chai": "*",
     "mocha-istanbul": "*",
-    "coveralls": "*"
+    "coveralls": "*",
+    "husky": "~0.5.1"
   },
   "scripts": {
     "test": "jshint . && jscs . && mocha -R spec",
     "coverage": "istanbul cover node_modules/.bin/_mocha --report html -- -R spec",
-    "coveralls": "istanbul cover _mocha --report lcovonly -- -R spec && cat ./coverage/lcov.info | coveralls"
+    "coveralls": "istanbul cover _mocha --report lcovonly -- -R spec && cat ./coverage/lcov.info | coveralls",
+    "precommit": "npm test",
+    "prepush": "npm test"
   }
 }

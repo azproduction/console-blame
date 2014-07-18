@@ -1,6 +1,6 @@
 {
   "name": "console-blame",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": "Mikhail Davydov <i@azproduction.ru>",
   "description": "It highlights and helps to find forgotten console.log calls in runtime",
   "contributors": [
@@ -9,7 +9,16 @@
       "email": "i@azproduction.ru"
     }
   ],
-  "keywords": [ "console", "log", "debug", "trap", "helper", "finder", "blame", "find" ],
+  "keywords": [
+    "console",
+    "log",
+    "debug",
+    "trap",
+    "helper",
+    "finder",
+    "blame",
+    "find"
+  ],
   "repository": {
     "type": "git",
     "url": "git://github.com/azproduction/console-blame.git"

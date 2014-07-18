@@ -1,7 +1,7 @@
 # console-blame
 [![NPM Version](https://badge.fury.io/js/console-blame.png)](https://npmjs.org/package/console-blame) [![Build Status](https://travis-ci.org/azproduction/console-blame.png?branch=master)](https://travis-ci.org/azproduction/console-blame) [![Coverage Status](https://coveralls.io/repos/azproduction/console-blame/badge.png?branch=master)](https://coveralls.io/r/azproduction/console-blame) [![Dependency Status](https://gemnasium.com/azproduction/console-blame.png)](https://gemnasium.com/azproduction/console-blame)
 
-It highlights and helps to find forgotten console.log calls in runtime
+It highlights and helps to find forgotten console.log calls in runtime. [Live example](http://beta.hstor.org/files/16e/13c/64f/16e13c64f9764d7081430a2e6e12967d.gif)
 
 ## Installation
 

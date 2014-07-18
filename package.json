@@ -27,11 +27,10 @@
   },
   "devDependencies": {
     "jshint": "2.1.3",
-    "mocha": "1.11.0",
-    "jscs": "1.0.0",
-    "istanbul": "0.1.39",
+    "mocha": "~1.11.0",
+    "jscs": "~1.4.5",
+    "istanbul": "~0.2.11",
     "chai": "*",
-    "mocha-istanbul": "*",
     "coveralls": "*",
     "husky": "~0.5.1"
   },

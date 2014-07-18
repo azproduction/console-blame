@@ -1,7 +1,8 @@
 {
     "excludeFiles": [
         ".git/**",
-        "node_modules/**"
+        "node_modules/**",
+        "coverage/**"
     ],
 
     "requireCurlyBraces": ["if", "else", "for", "while", "do"],
@@ -30,8 +31,16 @@
         "checkRedundantParams": true
     },
 
-    "requireSpacesInFunctionExpression": {
+    "requireSpacesInAnonymousFunctionExpression": {
         "beforeOpeningCurlyBrace": true,
+        "beforeOpeningRoundBrace": true
+    },
+
+    "requireSpacesInNamedFunctionExpression": {
+        "beforeOpeningCurlyBrace": true
+    },
+
+    "disallowSpacesInNamedFunctionExpression": {
         "beforeOpeningRoundBrace": true
     }
 }

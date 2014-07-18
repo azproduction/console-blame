@@ -120,6 +120,22 @@ ConsoleBlame.prototype = {
     },
 
     /**
+     * Removes all traps
+     *
+     * @returns {ConsoleBlame}
+     */
+    restore: function () {
+        var self = this;
+
+        Object.keys(this.capturedOriginals).forEach(function (method) {
+            self.consoleObject[method] = self.capturedOriginals[method];
+            delete self.capturedOriginals[method];
+        });
+
+        return this;
+    },
+
+    /**
      * @example
      * ```js
      * attachTrapTo('log');
@@ -141,22 +157,6 @@ ConsoleBlame.prototype = {
      */
     _attachTraps: function (trapNames) {
         trapNames.forEach(this._attachTrap.bind(this));
-
-        return this;
-    },
-
-    /**
-     * Removes all traps
-     *
-     * @returns {ConsoleBlame}
-     */
-    restore: function () {
-        var self = this;
-
-        Object.keys(this.capturedOriginals).forEach(function (method) {
-            self.consoleObject[method] = self.capturedOriginals[method];
-            delete self.capturedOriginals[method];
-        });
 
         return this;
     },
@@ -263,6 +263,7 @@ ConsoleBlame.prototype = {
         var padding = String(targetLine + this.options.contextSize).length + 1;
 
         for (var line in sources) {
+            /* istanbul ignore next */
             if (!sources.hasOwnProperty(line)) {
                 continue;
             }

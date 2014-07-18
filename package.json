@@ -28,8 +28,6 @@
   },
   "dependencies": {
     "chalk": "~0.5.1",
-    "exec-sync": "~0.1.6",
-    "gitblame": "~0.1.1",
     "object-assign": "~0.3.1",
     "pad": "~0.0.5",
     "parsetrace": "~0.1.5"

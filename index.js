@@ -6,6 +6,7 @@ var parsetrace = require('parsetrace'),
     pad = require('pad'),
     chalk = require('chalk'),
     assign = require('object-assign'),
+    EventEmitter = require('events').EventEmitter,
     format = require('util').format;
 
 var trappedToString = function () {
@@ -68,6 +69,7 @@ function ConsoleBlame(consoleObject, trapsList) {
     if (!(this instanceof ConsoleBlame)) {
         return new ConsoleBlame(consoleObject, trapsList);
     }
+    EventEmitter.call(this);
 
     if (Array.isArray(consoleObject)) {
         trapsList = consoleObject;
@@ -83,11 +85,12 @@ function ConsoleBlame(consoleObject, trapsList) {
 
     this.consoleObject = consoleObject || console;
     this.capturedOriginals = {};
+    this.middlewares = {};
 
     this.trap.apply(this, trapsList);
 }
 
-ConsoleBlame.prototype = {
+ConsoleBlame.prototype = assign(Object.create(EventEmitter.prototype), {
     /**
      * @example
      *
@@ -134,6 +137,48 @@ ConsoleBlame.prototype = {
             self.consoleObject[method] = self.capturedOriginals[method];
             delete self.capturedOriginals[method];
         });
+
+        return this;
+    },
+
+    /**
+     * Middleware for ConsoleBlame
+     *
+     * @example
+     *
+     * ```js
+     * consoleBlame()
+     * .use('console', function before(args, parent) {
+     *     process.stdout.write('Before\n');
+     *     // Keep parent function call
+     *     parent.apply(this, args);
+     *     process.stdout.write('After\n');
+     * })
+     * .use('console', function after(args, parent) {
+     *     parent.apply(this, args);
+     *     process.stdout.write('After\n');
+     * });
+     *
+     * console.log(123);
+     * ```
+     *
+     * ```
+     * Before
+     * 123
+     * After
+     * After
+     * ```
+     *
+     * @param {String}   middlewareName
+     * @param {Function} cb
+     * @returns {ConsoleBlame}
+     */
+    use: function (middlewareName, cb) {
+        if (!this.middlewares.hasOwnProperty(middlewareName)) {
+            this.middlewares[middlewareName] = [];
+        }
+
+        this.middlewares[middlewareName].push(cb);
 
         return this;
     },
@@ -238,7 +283,10 @@ ConsoleBlame.prototype = {
         var self = this;
 
         return function () {
-            originalMethod.apply(null, arguments);
+            var args = Array.prototype.slice.call(arguments);
+            self._applyMiddleware('console', args, function () {
+                originalMethod.apply(null, arguments);
+            });
 
             var parseTraceOptions = {
                 sources: self.options.sources,
@@ -246,9 +294,17 @@ ConsoleBlame.prototype = {
             };
 
             // Getting previous frame where console.*() was called
-            var frame = parsetrace(new Error(), parseTraceOptions).object().frames[1];
-            self._log(chalk.green(self.options.pathFormat), frame.file, frame.line, frame.column);
-            self._printSources(frame.source, frame.line);
+            var frames = parsetrace(new Error(), parseTraceOptions).object().frames;
+
+            self._applyMiddleware('file', [frames], function (frames) {
+                var frame = frames[1];
+                self._log(chalk.green(self.options.pathFormat), frame.file, frame.line, frame.column);
+            });
+
+            self._applyMiddleware('lines', [frames], function (frames) {
+                var frame = frames[1];
+                self._printSources(frame.source, frame.line);
+            });
         };
     },
 
@@ -289,7 +345,25 @@ ConsoleBlame.prototype = {
      */
     _log: function () {
         process.stdout.write(format.apply(null, arguments) + '\n');
+    },
+
+    /**
+     * Applies middleware
+     *
+     * @param {String}   name
+     * @param {Array}    args
+     * @param {Function} original
+     * @private
+     */
+    _applyMiddleware: function (name, args, original) {
+        var list = this.middlewares[name] || [];
+
+        list.reduce(function (original, cb) {
+            return function () {
+                cb(args, original);
+            };
+        }, original).apply(this, args);
     }
-};
+});
 
 module.exports = ConsoleBlame;

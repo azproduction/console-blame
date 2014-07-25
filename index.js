@@ -106,6 +106,7 @@ ConsoleBlame.prototype = {
     */
     configure: function (options) {
         assign(this.options, options || {});
+
         return this;
     },
 
@@ -117,6 +118,8 @@ ConsoleBlame.prototype = {
         }
 
         this._attachTraps(trapNames);
+
+        return this;
     },
 
     /**

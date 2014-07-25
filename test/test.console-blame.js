@@ -6,8 +6,11 @@ var expect = require('chai').expect,
     chalk = require('chalk'),
     fs = require('fs'),
     format = require('util').format,
+    sinon = require('sinon'),
     ConsoleBlame = require('..'),
     consoleBlame = ConsoleBlame;
+
+var TRAP_SIGNATURE = '[object ConsoleBlame]';
 
 /**
  * It locks stdout
@@ -108,38 +111,38 @@ describe('ConsoleBlame', function () {
         consoleBlame(null, ['error']);
 
         // Checking for a trap
-        expect(global.console.error.toString()).to.eql('[object ConsoleBlame]');
+        expect(global.console.error.toString()).to.eql(TRAP_SIGNATURE);
     });
 
     it('treats first argument as `trapsList` if it is an Array', function () {
         consoleBlame(['error']);
 
         // Checking for a trap
-        expect(global.console.error.toString()).to.eql('[object ConsoleBlame]');
+        expect(global.console.error.toString()).to.eql(TRAP_SIGNATURE);
     });
 
     it('uses `consoleObject` if available', function () {
         consoleBlame(consoleMock, ['error', 'log']);
 
         // Checking for a trap
-        expect(consoleMock.error.toString()).to.eql('[object ConsoleBlame]');
-        expect(consoleMock.log.toString()).to.eql('[object ConsoleBlame]');
+        expect(consoleMock.error.toString()).to.eql(TRAP_SIGNATURE);
+        expect(consoleMock.log.toString()).to.eql(TRAP_SIGNATURE);
     });
 
     it('traps all console methods if `trapsList` is not passed', function () {
         consoleBlame(consoleMock);
 
         // Checking for a trap
-        expect(consoleMock.error.toString()).to.eql('[object ConsoleBlame]');
-        expect(consoleMock.log.toString()).to.eql('[object ConsoleBlame]');
+        expect(consoleMock.error.toString()).to.eql(TRAP_SIGNATURE);
+        expect(consoleMock.log.toString()).to.eql(TRAP_SIGNATURE);
     });
 
     it('traps only required methods if `trapsList` is passed', function () {
         consoleBlame(consoleMock, ['error']);
 
         // Checking for a trap
-        expect(consoleMock.error.toString()).to.eql('[object ConsoleBlame]');
-        expect(consoleMock.log.toString()).to.not.eql('[object ConsoleBlame]');
+        expect(consoleMock.error.toString()).to.eql(TRAP_SIGNATURE);
+        expect(consoleMock.log.toString()).to.not.eql(TRAP_SIGNATURE);
     });
 
     describe('#options', function () {
@@ -280,33 +283,143 @@ describe('ConsoleBlame', function () {
 
     describe('#configure(options)', function () {
 
-        it('overrides options');
-        it('returns current `ConsoleBlame` instance');
+        it('overrides options', function () {
+            var options = {
+                lineFormat: '-%d | %s',
+                pathFormat: '-%s:%d:%d',
+                contextSize: 4,
+                sources: false,
+                _extraProperty: true
+            };
+
+            var blame = consoleBlame(consoleMock, ['log']).configure(options);
+
+            expect(blame.options).to.deep.eql(options);
+        });
+
+        it('accepts empty config object', function () {
+            expect(function () {
+                consoleBlame(consoleMock, ['log']).configure();
+            }).to.not.throw(Error);
+        });
+
+        it('returns current `ConsoleBlame` instance', function () {
+            var blame = consoleBlame(consoleMock, ['log']);
+
+            expect(blame.configure()).to.eql(blame);
+        });
 
     });
 
     describe('#trap(...methodNames)', function () {
 
-        it('traps all passed methods names of `consoleObject`');
-        it('traps all `consoleObject` methods of `consoleObject`');
-        it('returns current `ConsoleBlame` instance');
-        it('forces trapped method to call the original console method');
-        it('does not trap method twice');
-        it('does not trap non-functions');
+        it('traps all passed methods names of `consoleObject`', function () {
+            consoleBlame(consoleMock, ['undefined']).trap('log');
+
+            expect(consoleMock.log.toString()).to.eql(TRAP_SIGNATURE);
+            expect(consoleMock.error.toString()).to.not.eql(TRAP_SIGNATURE);
+        });
+
+        it('traps all `consoleObject` methods of `consoleObject`', function () {
+            consoleBlame(consoleMock, ['undefined']).trap();
+
+            expect(consoleMock.log.toString()).to.eql(TRAP_SIGNATURE);
+            expect(consoleMock.error.toString()).to.eql(TRAP_SIGNATURE);
+        });
+
+        it('returns current `ConsoleBlame` instance', function () {
+            var blame = consoleBlame(consoleMock, ['log']);
+
+            expect(blame.trap()).to.eql(blame);
+        });
+
+        it('forces trapped method to call the original console method', function () {
+            var spy = sinon.spy(consoleMock, 'log');
+            consoleBlame(consoleMock, ['log']);
+
+            var unlock = trapStdout();
+            consoleMock.log('%s %s', 1, 2);
+            unlock();
+
+            expect(spy.calledOnce).to.be.eql(true);
+            expect(spy.calledWith('%s %s', 1, 2)).to.be.eql(true);
+        });
+
+        it('does not trap method twice', function () {
+            var blame = consoleBlame(consoleMock, ['log']);
+            var expected = consoleMock.log;
+            blame.trap('log');
+            consoleBlame(consoleMock, ['log']);
+
+            expect(consoleMock.log).to.eql(expected);
+        });
+
+        it('does not trap non-functions', function () {
+            consoleMock.pewpew = 123;
+            consoleBlame(consoleMock, ['undefined']);
+            consoleBlame(consoleMock);
+
+            expect(consoleMock.pewpew).to.eql(123);
+            expect(consoleMock).to.not.have.property('undefined');
+        });
 
     });
 
     describe('#restore()', function () {
 
-        it('restores all traps');
-        it('returns current `ConsoleBlame` instance');
+        it('restores all traps', function () {
+            var blame = consoleBlame(consoleMock, ['log']);
+            blame.restore();
+
+            expect(consoleMock.log.toString()).to.not.eql(TRAP_SIGNATURE);
+            expect(consoleMock.error.toString()).to.not.eql(TRAP_SIGNATURE);
+
+            var unlock = trapStdout();
+            consoleMock.log('123');
+            var lines = unlock();
+
+            expect(lines).to.eql(['123', '']);
+        });
+
+        it('returns current `ConsoleBlame` instance', function () {
+            var blame = consoleBlame(consoleMock, ['log']);
+
+            expect(blame.restore()).to.eql(blame);
+        });
 
     });
 
     describe('#_printSources()', function () {
 
-        it('prints source code line by line if available');
-        it('highlights target line');
+        it('prints source code line by line if available', function () {
+            var lineFormat = '%s,%s';
+            consoleBlame(consoleMock, ['log']).configure({
+                lineFormat: lineFormat
+            });
+
+            var unlock = trapStdout();
+            fixtures.log.method(consoleMock);
+            var lines = unlock();
+
+            var expected = fixtures.log.lines.map(function (code, line) {
+                return format(' ' + lineFormat, line + 1, code);
+            });
+
+            var actual = lines.slice(2, 6);
+
+            expect(expected).to.eql(actual);
+        });
+
+        it('highlights target line', function () {
+            consoleBlame(consoleMock, ['log']);
+
+            chalk.enabled = true;
+            var unlock = trapStdout();
+            fixtures.log.method(consoleMock);
+            var lines = unlock();
+
+            expect(lines[3]).to.eql(chalk.bgRed.white('2 | ' + fixtures.log.lines[1]));
+        });
 
     });
 

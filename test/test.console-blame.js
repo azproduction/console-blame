@@ -389,6 +389,205 @@ describe('ConsoleBlame', function () {
 
     });
 
+    describe('#use()', function () {
+
+        it('case use("channel", callback)', function () {
+
+            consoleBlame(consoleMock, ['log']).use('console', function (original) {
+                process.stdout.write('before\n');
+                original();
+                process.stdout.write('after\n');
+            });
+
+            var unlock = trapStdout();
+            consoleMock.log('123');
+            var lines = unlock();
+
+            expect(lines.slice(0, 3)).to.eql(['before', '123', 'after']);
+
+        });
+
+        it('case use({"channel": callback, ...})', function () {
+
+            consoleBlame(consoleMock, ['log']).use({
+                console: function (original) {
+                    process.stdout.write('before\n');
+                    original();
+                    process.stdout.write('after\n');
+                },
+
+                file: function (original) {
+                    process.stdout.write('before\n');
+                    original();
+                    process.stdout.write('after\n');
+                }
+            });
+
+            var unlock = trapStdout();
+            consoleMock.log('123');
+            var lines = unlock();
+
+            // Check console
+            expect(lines.slice(0, 3)).to.eql(['before', '123', 'after']);
+
+            // Check file
+            expect(lines[3]).to.eql('before');
+            expect(lines[5]).to.eql('after');
+
+        });
+
+        it('passes original method and list of arguments to the callback', function () {
+
+            consoleBlame(consoleMock, ['log']).use('console', function (original, args) {
+                expect(original).to.be.a('function');
+                expect(args).to.be.eql(['%s %d', 123, 123]);
+            });
+
+            var unlock = trapStdout();
+            consoleMock.log('%s %d', 123, 123);
+            unlock();
+
+        });
+
+        it('ignores unexpected channels', function () {
+
+            consoleBlame(consoleMock, ['log']).use('console2', function (original) {
+                process.stdout.write('before\n');
+                original();
+                process.stdout.write('after\n');
+            });
+
+            var unlock = trapStdout();
+            consoleMock.log('123');
+            var lines = unlock();
+
+            expect(lines.slice(0, 3)).to.not.eql(['before', '123', 'after']);
+
+        });
+
+        it('calls all middleware functions', function () {
+
+            consoleBlame(consoleMock, ['log'])
+                .use('console', function (original) {
+                    process.stdout.write('before1\n');
+                    original();
+                    process.stdout.write('after1\n');
+                })
+                .use('console', function (original) {
+                    process.stdout.write('before2\n');
+                    original();
+                    process.stdout.write('after2\n');
+                });
+
+            var unlock = trapStdout();
+            consoleMock.log('123');
+            var lines = unlock();
+
+            expect(lines.slice(0, 5)).to.eql(['before2', 'before1', '123', 'after1', 'after2']);
+
+        });
+
+        it('uses default arguments of parent function', function () {
+
+            consoleBlame(consoleMock, ['log']).use('console', function (original) {
+                process.stdout.write('before\n');
+                original();
+            });
+
+            var unlock = trapStdout();
+            consoleMock.log('123');
+            var lines = unlock();
+
+            expect(lines[1]).to.eql('123');
+
+        });
+
+        it('overrides default arguments if passed', function () {
+
+            consoleBlame(consoleMock, ['log']).use('console', function (original) {
+                process.stdout.write('before\n');
+                original(1234);
+            });
+
+            var unlock = trapStdout();
+            consoleMock.log('123');
+            var lines = unlock();
+
+            expect(lines[1]).to.eql('1234');
+
+        });
+
+        it('returns current `ConsoleBlame` instance', function () {
+            var blame = consoleBlame(consoleMock, ['log']);
+
+            expect(blame.use('console', function () {})).to.eql(blame);
+        });
+
+        describe('console', function () {
+
+            it('traps console output', function () {
+
+                consoleBlame(consoleMock, ['log']).use('console', function (original) {
+                    process.stdout.write('before\n');
+                    original();
+                    process.stdout.write('after\n');
+                });
+
+                var unlock = trapStdout();
+                consoleMock.log('123');
+                var lines = unlock();
+
+                expect(lines[0]).to.eql('before');
+                expect(lines[2]).to.eql('after');
+
+            });
+
+        });
+
+        describe('file', function () {
+
+            it('traps file output', function () {
+
+                consoleBlame(consoleMock, ['log']).use('file', function (original) {
+                    process.stdout.write('before\n');
+                    original();
+                    process.stdout.write('after\n');
+                });
+
+                var unlock = trapStdout();
+                consoleMock.log('123');
+                var lines = unlock();
+
+                expect(lines[1]).to.eql('before');
+                expect(lines[3]).to.eql('after');
+
+            });
+
+        });
+
+        describe('code', function () {
+
+            it('traps source code output', function () {
+
+                consoleBlame(consoleMock, ['log']).use('code', function (original) {
+                    process.stdout.write('before\n');
+                    original();
+                    process.stdout.write('after\n');
+                });
+
+                var unlock = trapStdout();
+                consoleMock.log('123');
+                var lines = unlock();
+
+                expect(lines[2]).to.eql('before');
+                expect(lines[lines.length - 2]).to.eql('after');
+
+            });
+
+        });
+
+    });
+
     describe('#_printSources()', function () {
 
         it('prints source code line by line if available', function () {

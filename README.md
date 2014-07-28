@@ -20,7 +20,9 @@ npm install console-blame --save-dev
  - `ConsoleBlame#configure(Object options)` see `Configuration options`
  - `ConsoleBlame#restore()` releases all trapped methods
  - `ConsoleBlame#trap(String[] ...methods)` traps all listed methods
- - `ConsoleBlame#trap()` traps all available methods 
+ - `ConsoleBlame#trap()` traps all available methods
+ - `ConsoleBlame#use(blockName, callback(original, args))` applies decorator to a blockName
+ - `ConsoleBlame#use({blockName: callback(original, args), ...})` applies decorators
 
 ## Configuration options
 
@@ -92,4 +94,23 @@ A log message
  173 |
  174 | console.log('A log message'); // <<< This line will be highlighted
  175 |
+```
+
+## Middleware
+
+### Available middleware points
+
+ - `console` - decorates original console method call, accepts list of args passed to a console's method
+ - `file` - decorates file info, accepts list of stack frames  
+ - `code` - lines of code, accepts list of stack frames
+
+**Adding line after information about file** 
+
+```js
+require('console-blame')().use('file', function (original, args) {
+    original();
+    
+    var previousFrame = args[0][1];
+    process.stdout.write(gitBlameSync(previousFrame.file, previousFrame.line) + '\n');
+});
 ```

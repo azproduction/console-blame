@@ -147,15 +147,16 @@ ConsoleBlame.prototype = assign(Object.create(EventEmitter.prototype), {
      * @example
      *
      * ```js
+     * // One by one
      * consoleBlame()
      * .use('console', function before(args, parent) {
      *     process.stdout.write('Before\n');
      *     // Keep parent function call
-     *     parent.apply(this, args);
+     *     parent();
      *     process.stdout.write('After\n');
      * })
      * .use('console', function after(args, parent) {
-     *     parent.apply(this, args);
+     *     parent();
      *     process.stdout.write('After\n');
      * });
      *
@@ -169,18 +170,46 @@ ConsoleBlame.prototype = assign(Object.create(EventEmitter.prototype), {
      * After
      * ```
      *
-     * @param {String}   middlewareName
-     * @param {Function} cb
+     * @example
+     *
+     * ```js
+     * // Bulk
+     * consoleBlame()
+     * .use({
+     *     console: function (args, parent) {
+     *         parent();
+     *         process.stdout.write('After\n');
+     *     }
+     * })
+     * ```
+     *
+     * @param {String|Object} middlewareName
+     * @param {Function}      [cb]
      * @returns {ConsoleBlame}
      */
     use: function (middlewareName, cb) {
+        var self = this;
+        var list = {};
+
+        if (typeof middlewareName === 'string') {
+            list[middlewareName] = cb;
+        } else {
+            list = middlewareName;
+        }
+
+        Object.keys(list).forEach(function (middlewareName) {
+            self._useOne(middlewareName, list[middlewareName]);
+        });
+
+        return this;
+    },
+
+    _useOne: function (middlewareName, cb) {
         if (!this.middlewares.hasOwnProperty(middlewareName)) {
             this.middlewares[middlewareName] = [];
         }
 
         this.middlewares[middlewareName].push(cb);
-
-        return this;
     },
 
     /**
@@ -301,7 +330,7 @@ ConsoleBlame.prototype = assign(Object.create(EventEmitter.prototype), {
                 self._log(chalk.green(self.options.pathFormat), frame.file, frame.line, frame.column);
             });
 
-            self._applyMiddleware('lines', [frames], function (frames) {
+            self._applyMiddleware('code', [frames], function (frames) {
                 var frame = frames[1];
                 self._printSources(frame.source, frame.line);
             });
@@ -359,8 +388,17 @@ ConsoleBlame.prototype = assign(Object.create(EventEmitter.prototype), {
         var list = this.middlewares[name] || [];
 
         list.reduce(function (original, cb) {
+            var wrappedOriginal = function () {
+                if (arguments.length === 0) {
+                    return original.apply(null, args);
+                }
+
+                return original.apply(null, arguments);
+            };
+
             return function () {
-                cb(args, original);
+                var args = Array.prototype.slice.call(arguments);
+                cb(wrappedOriginal, args);
             };
         }, original).apply(this, args);
     }
